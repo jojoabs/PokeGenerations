@@ -1,0 +1,39 @@
+local HEADS = {
+    {position = {x = 100, y = 200, z = 7}, spell = "fireball", damage = 100},
+    {position = {x = 150, y = 250, z = 7}, spell = "energy beam", damage = 150}
+    -- Adicione mais cabeças conforme necessário
+}
+
+local SPELL_INTERVAL = 2000 -- Intervalo entre lançamentos de habilidades em milissegundos (2 segundos)
+local FALSE_FLOOR_CHANCE = 0.5 -- Chance de um piso ser falso
+local DAMAGE_MULTIPLIER = 2 -- Multiplicador de dano
+
+function onPlayerMove(player, fromPosition, toPosition)
+    local tile = toPosition:getTile()
+    if not tile then
+        return true
+    end  
+
+    -- Verifica se o piso é falso
+    if math.random() < FALSE_FLOOR_CHANCE then
+        player:sendCancelMessage("Você caiu em um piso falso e foi teleportado de volta!")
+        player:teleportTo(Position(100, 100, 7)) -- Posição de retorno ao início do caminho
+        return true
+    end
+
+    -- Verifica se o jogador ativou alguma armadilha
+    for _, head in ipairs(HEADS) do
+        local distance = math.max(math.abs(toPosition.x - head.position.x), math.abs(toPosition.y - head.position.y))
+        if distance <= 3 then -- Define a distância de ativação das cabeças (por exemplo, 3 tiles)
+            local creature = tile:getTopCreature()
+            if creature and creature:isPlayer() then
+                local damage = head.damage * DAMAGE_MULTIPLIER
+                creature:addHealth(-damage)
+                creature:sendTextMessage(MESSAGE_STATUS_CONSOLE_RED, "Você ativou uma armadilha e sofreu " .. damage .. " de dano!")
+                creature:addSpellCooldown(head.spell, SPELL_INTERVAL)
+                creature:getPosition():sendMagicEffect(CONST_ME_FIREAREA) -- Efeito visual ao lançar a habilidade
+            end
+        end
+    end
+    return true
+end
